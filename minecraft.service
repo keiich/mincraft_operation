@@ -1,0 +1,28 @@
+[Unit]
+Description=Minecraft Bedrock Server
+After=network-online.target
+
+[Service]
+WorkingDirectory=/home/ubuntu/minecraft
+User=ubuntu
+
+# ======== 自動アップデートスクリプトを実行 ========
+ExecStartPre=/bin/bash /home/ubuntu/minecraft/update_bedrock.sh
+
+# 起動前に premium_cache をリネームしてバックアップ
+ExecStartPre=/bin/bash -c 'if [ -d premium_cache ]; then mv premium_cache premium_cache_backup_$(date +%%Y%%m%%d_%%H%%M%%S); fi'
+
+ExecStart=/usr/bin/screen -DmS minecraft bash -c 'logfile="bedrock_server_$(date +%%Y-%%m-%%d_%%H).log"; echo $logfile > /home/ubuntu/minecraft/current_logfile.txt; ./bedrock_server >> $logfile 2>&1'
+ExecReload=/usr/bin/screen -p 0 -S minecraft -X eval 'stuff "reload"\\015'
+
+ExecStop=/usr/bin/screen -p 0 -S minecraft -X eval 'stuff "say Server Shutdown. Saving map..."\\015'
+ExecStop=/usr/bin/screen -p 0 -S minecraft -X eval 'stuff "save hold"\\015'
+ExecStop=/bin/sleep 5
+ExecStop=/usr/bin/screen -p 0 -S minecraft -X eval 'stuff "save resume"\\015'
+ExecStop=/bin/sleep 2
+ExecStop=/usr/bin/screen -p 0 -S minecraft -X eval 'stuff "stop"\\015'
+Restart=on-failure
+RestartSec=60s
+
+[Install]
+WantedBy=network-online.target
